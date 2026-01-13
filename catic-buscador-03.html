@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador del Catecismo</title>
+    <script src="catecismo_data.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #eee; 
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .search-box {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .clear-btn {
+            background-color: #f44336;
+        }
+
+        .clear-btn:hover {
+            background-color: #da190b;
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .result-count {
+            color: #666;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .paragraph {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4CAF50;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .paragraph-number {
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 8px;
+        }
+
+        .paragraph-text {
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .highlight {
+            background-color: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<!-- Agrega onload="searchOnLoad()" para ejecutar la función al cargar la página -->
+<body>
+    <div class="container">
+        <h1>Buscador del Catecismo de la Iglesia Católica</h1>
+        
+        <div class="search-box">
+            <div class="input-group">
+                <label for="numberSearch">Buscar por número o rango:</label>
+                <input type="text" id="numberSearch" placeholder="Ej: 1, 5-10, 100">
+                <div class="help-text">Puedes buscar un número (1), varios separados por comas (1,5,10) o un rango (1-10)</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="textSearch">Buscar por palabras:</label>
+                <input type="text" id="textSearch" placeholder="Ej: fe, amor, Dios">
+                <div class="help-text">Busca palabras, frases, o citas bíblicas en el contenido de los párrafos</div>
+            </div>
+            
+            <button onclick="search()">Buscar</button>
+            <button class="clear-btn" onclick="clearSearch()">Limpiar</button>
+        </div>
+        
+        <div class="results" id="results"></div>
+
+<div style="padding: 1em; margin-bottom: 1em; border: 1px; background-color: #eee; font-size: 12px; color: #777;">
+Content in this page is licensed under <a rel="nofollow" class="external text" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0 license</a> by Marcelo Andrés Reynoso.
+This work is a spanish translation of the work “<a rel="nofollow" class="external text" href="https://www.intratext.com/IXT/FRA0013/_INDEX.HTM">Catéchisme de l'Église Catholique</a>” 
+by <a rel="nofollow" class="external text" href="https://www.intratext.com">The IntraText Digital Library</a>, licensed under the <a rel="nofollow" class="external text" href="https://www.intratext.com/info/copyENG.htm">CC BY-NC-SA 3.0 license</a>.
+</div>
+
+    </div>
+
+<script>
+
+        function parseNumberInput(input) {
+            const numbers = new Set();
+            const parts = input.split(',').map(s => s.trim());
+            
+            for (const part of parts) {
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                    if (!isNaN(start) && !isNaN(end)) {
+                        for (let i = start; i <= end; i++) {
+                            numbers.add(i);
+                        }
+                    }
+                } else {
+                    const num = parseInt(part);
+                    if (!isNaN(num)) {
+                        numbers.add(num);
+                    }
+                }
+            }
+            
+            return Array.from(numbers).sort((a, b) => a - b);
+        }
+
+        function highlightText(text, searchTerms) {
+            if (!searchTerms) return text;
+            
+            let highlighted = text;
+            const terms = searchTerms.toLowerCase().split(/\s+/);
+            
+            terms.forEach(term => {
+                if (term.length > 2) {
+                    const regex = new RegExp(`(${term})`, 'gi');
+                    highlighted = highlighted.replace(regex, '<span class="highlight">$1</span>');
+                }
+            });
+            
+            return highlighted;
+        }
+
+        function search() {
+            const numberInput = document.getElementById('numberSearch').value.trim();
+            const textInput = document.getElementById('textSearch').value.trim().toLowerCase();
+            const resultsDiv = document.getElementById('results');
+            
+            let filteredResults = [...catecismo];
+            
+            // Filtrar por números
+            if (numberInput) {
+                const numbers = parseNumberInput(numberInput);
+                filteredResults = filteredResults.filter(p => numbers.includes(p.numero));
+            }
+            
+            // Filtrar por texto
+            if (textInput) {
+                filteredResults = filteredResults.filter(p => 
+                    p.texto.toLowerCase().includes(textInput)
+                );
+            }
+            
+            // Mostrar resultados
+            if (filteredResults.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">No se encontraron resultados</div>';
+                return;
+            }
+            
+            let html = `<div class="result-count">Se encontraron ${filteredResults.length} párrafo(s)</div>`;
+            
+            filteredResults.forEach(p => {
+                const highlightedText = highlightText(p.texto, textInput);
+                html += `
+                    <div class="paragraph">
+                        <div class="paragraph-number">§ ${p.numero}</div>
+                        <div class="paragraph-text">${highlightedText}</div>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        function clearSearch() {
+            document.getElementById('numberSearch').value = '';
+            document.getElementById('textSearch').value = '';
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Permitir búsqueda con Enter
+        document.getElementById('numberSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') search();
+        });
+        
+        document.getElementById('textSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') search();
+        });
+    </script>
+</body>
+</html>
